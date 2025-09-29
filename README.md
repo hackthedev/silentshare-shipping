@@ -9,6 +9,8 @@ SilentShare is meant to be a new decentralized file sharing software for servers
   - Spam penalties
   - Incorrect event data
   - Manually voted penalties
+- Rate Limits
+  - When a server rate limits a request it will automatically go to the next available server, acting like a load balancer!
 
 These penalties are for the many different servers that relay requests or serve files through the network as there is no real client to client communication. Every Server Node has a trust score of a server. With each penalty, that trust score is going down, until the server gets automatically blocked. This way bad actors are automatically being purged from the network.
 
@@ -42,10 +44,22 @@ Generally every user can upload files on default.
 
 ## Admin Interface
 
-There's also a admin interface to manage resources and in the future to manage events as well once theyare implemented. You can also block resources received from other servers. Its also planned to add a `Settings` section so your server config can be edited directly like rate limits, upload size limits etc. 
+There's also a admin interface to manage resources and in the future to manage events as well once theyare implemented. You can also block resources received from other servers. Its also planned to add a `Settings` section so your server config can be edited directly like rate limits, upload size limits etc.
 
 > [!NOTE]
 >
 > This is where the manual penalty vote would be implemented as example so if a resource is considered illegal a vote will be cast across the network to remove the resource and block the servers hosting said file.
 
 ![image-20250929134549575](./assets/image-20250929134549575.png)
+
+<br>
+
+## Current Network State
+
+Currently file syncing isnt implemented yet as well as the automatic penalties because there are a few small things i need to figure out yet and plan so i can implement these features in the best possible way so that its not becoming painful in the future. 
+
+Currently only the syncing of resources work, which means if server 1 and 2 know each other, they can share their file informations with each other, and if a client connects to either server 1 or 2, he will still be able to view all files from both servers. So basically it works, just the actual file syncing too isnt done yet.
+
+Other than the network syncing stuff everything is working from the pov of a "single instance". Users and admins can upload files, you can set upload limits, you can verify, unlist, block etc file resources etc.
+
+Donations would help me a lot as it means i can spend more time on the development.
