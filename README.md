@@ -42,7 +42,7 @@ Generally every user can upload files on default.
 
 ## Admin Interface
 
-There's also a admin interface to manage resources and in the future to manage events as well once theyare implemented. You can also block resources received from other servers. Its also planned to add a `Settings` section so your server config can be edited directly like rate limits, upload size limits etc.
+There's also a admin interface to manage resources and in the future to manage events as well once theyare implemented. You can also block resources received from other servers. Its also planned to add a `Settings` section so your server config can be edited directly like rate limits, upload size limits etc. 
 
 > [!NOTE]
 >
