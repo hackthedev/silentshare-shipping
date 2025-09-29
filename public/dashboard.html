@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width,initial-scale=1" name="viewport"/>
+    <title>Admin – Dashboard</title>
+    <link href="/css/dashboard.css" rel="stylesheet"/>
+    <script src="/js/helper.js"></script>
+</head>
+<body>
+<div class="container">
+    <aside aria-label="Admin Navigation" class="left-panel" role="navigation">
+        <div class="brand">
+            <div class="logo">A</div>
+            <div>
+                <h1>Admin</h1>
+                <p>Management &amp; Overview</p>
+            </div>
+        </div>
+
+        <nav class="tabs" id="tabs">
+            <div class="tab active" data-tab="dashboard">
+                <div class="icon">D</div>
+                <div class="label">Dashboard</div>
+            </div>
+            <div class="tab" data-tab="resources">
+                <div class="icon">R</div>
+                <div class="label">Resources</div>
+            </div>
+            <div class="tab" data-tab="events">
+                <div class="icon">E</div>
+                <div class="label">Events</div>
+            </div>
+            <div class="tab" data-tab="deliveries">
+                <div class="icon">D</div>
+                <div class="label">Deliveries</div>
+            </div>
+        </nav>
+
+        <div class="left-actions">
+            <a href="/">
+                <button class="btn">Back</button>
+            </a>
+            <button class="btn" id="refreshAll">Refresh</button>
+            <button class="btn primary" id="openApiDoc" title="Open API docs">API</button>
+        </div>
+    </aside>
+
+    <main class="content" role="main">
+        <header class="content-header">
+            <div>
+                <h2 id="contentTitle">Dashboard</h2>
+                <div class="small" id="contentSubtitle">Quick overview of databases &amp; events</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <input id="globalSearch" placeholder="Search..."
+                       style="padding:8px;border-radius:10px;border:1px solid var(--border);min-width:260px"/>
+                <button class="btn" id="btnReload">Reload</button>
+            </div>
+        </header>
+
+        <section class="content-body" id="contentBody">
+            <!-- DASHBOARD -->
+            <div id="panel-dashboard">
+                <h3>Summary</h3>
+                <div class="small">Loading numbers from server...</div>
+
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px">
+                    <div style="padding:12px;border-radius:12px;background:#fff;border:1px solid var(--border)">
+                        <div class="small">Resources</div>
+                        <div id="statResources" style="font-size:22px;font-weight:700">—</div>
+                    </div>
+                    <div style="padding:12px;border-radius:12px;background:#fff;border:1px solid var(--border)">
+                        <div class="small">Events</div>
+                        <div id="statEvents" style="font-size:22px;font-weight:700">—</div>
+                    </div>
+                    <div style="padding:12px;border-radius:12px;background:#fff;border:1px solid var(--border)">
+                        <div class="small">Deliveries</div>
+                        <div id="statDeliveries" style="font-size:22px;font-weight:700">—</div>
+                    </div>
+                </div>
+
+                <div style="margin-top:18px">
+                    <h4>Recent Events</h4>
+                    <div id="latestEventsPreview">loading...</div>
+                </div>
+            </div>
+
+            <!-- RESOURCES -->
+            <div id="panel-resources" style="display:none">
+
+                <div class="msg"></div>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <h3>Resources</h3>
+                    <div class="small muted">Read-only overview</div>
+                </div>
+
+                <!-- admin file upload -->
+                <form autocomplete="off" enctype="multipart/form-data" id="uploadForm"
+                      style="width: 100%;font-size: 12px;margin-bottom: 10px; ">
+                    <label class="uploadBtnStyle" for="fileInput">Upload
+                        new file</label><br>
+                    <input id="fileInput" name="file" style="visibility: hidden" type="file"/>
+
+                    <div class="preview" id="preview"></div>
+
+                    <div class="row">
+                        <button class="uploadBtnStyle" id="btnUpload" style="visibility: hidden;" type="button">Start
+                            Upload
+                        </button>
+                    </div>
+
+                    <progress id="progressBar" max="100" style="display:none" value="0"></progress>
+                </form>
+
+                <div class="grid-wrap">
+                    <div class="grid-table" id="resourcesGrid">
+                        <div class="grid-header">
+                            <div class="grid-cell">ID</div>
+                            <div class="grid-cell">Host</div>
+                            <div class="grid-cell">File Hash</div>
+                            <div class="grid-cell">File Type</div>
+                            <div class="grid-cell">Status</div>
+                            <div class="grid-cell">Size</div>
+                            <div class="grid-cell">Created</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EVENTS -->
+            <div id="panel-events" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <h3>Events — Servers</h3>
+                    <div>
+                        <button class="btn" id="refreshEvents">Reload Events</button>
+                    </div>
+                </div>
+
+                <div class="events-split">
+                    <aside class="servers-list" id="serversList"
+                           style="min-width:240px;border-right:1px solid var(--border);padding-right:10px">
+                        <div class="small" style="padding:8px 4px;color:var(--muted)">Hosts</div>
+                        <div id="serversContainer">loading...</div>
+                    </aside>
+                    <div id="eventsListWrap" style="flex:1;padding-left:12px;overflow:auto">
+                        <div class="small" id="eventsSubtitle">Select a host to view events.</div>
+                        <div id="eventsList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DELIVERIES -->
+            <div id="panel-deliveries" style="display:none">
+                <h3>Event Deliveries</h3>
+                <div class="grid-wrap">
+                    <div class="grid-table" id="deliveriesGrid">
+                        <div class="grid-header">
+                            <div class="grid-cell">ID</div>
+                            <div class="grid-cell">Event</div>
+                            <div class="grid-cell">Target Host</div>
+                            <div class="grid-cell">Delivered At</div>
+                            <div class="grid-cell">Actions</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </section>
+    </main>
+</div>
+
+<!-- Modal -->
+<div aria-modal="true" class="modal-backdrop" id="modalBackdrop" role="dialog">
+    <div class="modal" id="modal">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div>
+                <h3 id="modalTitle">Details</h3>
+                <div class="small muted" id="modalSubtitle"></div>
+            </div>
+            <div class="row">
+                <button class="btn ghost" id="closeModal">Close</button>
+            </div>
+        </div>
+        <div id="modalBody"></div>
+    </div>
+</div>
+
+<script>
+    // helpers etc
+
+    const token = localStorage.getItem('token');
+
+    const API = {
+        resources: '/admin/resources',
+        events: '/admin/events',
+        deliveries: '/admin/event-deliveries',
+    };
+
+
+    function showBanner(text, color) {
+        const currentPanel = Array.from(document.querySelectorAll('[id^="panel-"]')).filter(e => e.style?.display == "")
+        let element = currentPanel[0].querySelector('.msg');
+
+        if (!element) {
+            console.warn(`No MSG element inside the following panel:`)
+            console.warn(currentPanel[0])
+            return;
+        }
+
+        element.innerHTML = text;
+        element.style.backgroundColor = `hsla(from ${color} h s calc(l * 1.5) / 0.5)`;
+        element.style.border = `3px solid hsl(from ${color} h s calc(l * 1.25) / 0.75)`;
+        element.style.color = `hsl(from ${color} h s calc(l * 0.5))`;
+        element.style.display = 'block';
+    }
+
+
+    // admin file upload
+    const fileInput = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    const btnUpload = document.getElementById('btnUpload');
+    const progressBar = document.getElementById('progressBar');
+    let currentFile = null;
+
+    fileInput.addEventListener('change', () => {
+        preview.innerHTML = '';
+        const f = fileInput.files && fileInput.files[0];
+        if (!f) {
+            currentFile = null;
+            return;
+        }
+        currentFile = f;
+
+        const mime = f.type || '';
+        const url = URL.createObjectURL(f);
+
+        if (mime.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.className = 'preview-img';
+            img.src = url;
+            preview.appendChild(img);
+        } else if (mime.startsWith('video/')) {
+            const v = document.createElement('video');
+            v.className = 'preview-video';
+            v.controls = true;
+            v.src = url;
+            preview.appendChild(v);
+        } else if (mime.startsWith('audio/')) {
+            const a = document.createElement('audio');
+            a.controls = true;
+            a.src = url;
+            preview.appendChild(a);
+        } else {
+            preview.textContent = 'Preview not available for this file type';
+        }
+
+        btnUpload.style.visibility = "visible";
+    });
+
+
+    btnUpload.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!currentFile) {
+            return;
+        }
+
+        btnUpload.disabled = true;
+        progressBar.style.display = 'block';
+
+        const form = new FormData();
+        form.append('file', currentFile);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/admin/upload', true);
+        xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.getItem('token'));
+
+        progressBar.value = 0;
+
+        xhr.upload.onprogress = (ev) => {
+            if (ev.lengthComputable) {
+                const pct = Math.round((ev.loaded / ev.total) * 100);
+                progressBar.value = pct;
+            }
+        };
+
+        xhr.onload = () => {
+            try {
+                const json = JSON.parse(xhr.responseText || '{}');
+
+                if (json?.ok === true && json?.file_hash) {
+
+                    if (json?.exists === true) {
+                        showBanner(`This file was already uploaded! Hash: ${json?.file_hash}`, "orange");
+                    } else {
+                        showBanner(`Your file has been successfully uploaded.
+                                    Note that its set to "unlisted" on default!`, "green");
+                    }
+
+                    // clean up
+                    preview.innerHTML = '';
+                    btnUpload.style.visibility = "hidden";
+
+                    fetchResources();
+                } else {
+                    showBanner("Upload failed! " + (json?.code || json?.error), "indianred")
+                }
+
+                console.log(json);
+            } catch {
+                showBanner(xhr.responseText, "indianred")
+            }
+            btnUpload.disabled = false;
+        };
+
+        xhr.onerror = () => {
+            showBanner("Upload failed! Possible network error.", "indianred")
+            btnUpload.disabled = false;
+        };
+
+        xhr.send(form);
+    });
+
+
+    function el(tag, props = {}, ...children) {
+        const node = document.createElement(tag);
+        for (const k in props) {
+            if (k === 'class') node.className = props[k];
+            else if (k === 'html') node.innerHTML = props[k];
+            else node.setAttribute(k, props[k]);
+        }
+        children.flat().forEach(c => {
+            if (c == null) return;
+            node.append(typeof c === 'string' ? document.createTextNode(c) : c);
+        });
+        return node;
+    }
+
+    function prettyJSON(obj) {
+        try {
+            return JSON.stringify(obj, null, 2);
+        } catch {
+            return String(obj);
+        }
+    }
+
+    function humanSize(bytes) {
+        if (bytes == null) return '—';
+        const b = Number(bytes);
+        if (b < 1024) return b + ' B';
+        if (b < 1048576) return (b / 1024).toFixed(2) + ' KB';
+        if (b < 1073741824) return (b / 1048576).toFixed(2) + ' MB';
+        return (b / 1073741824).toFixed(2) + ' GB';
+    }
+
+    function showModal(title, subtitle, bodyHtml) {
+        document.getElementById('modalTitle').textContent = title || '';
+        document.getElementById('modalSubtitle').textContent = subtitle || '';
+        const mb = document.getElementById('modalBody');
+        mb.innerHTML = '';
+        if (typeof bodyHtml === 'string') mb.innerHTML = bodyHtml;
+        else mb.appendChild(bodyHtml);
+        document.getElementById('modalBackdrop').style.display = 'flex';
+    }
+
+    function stopAllMedia(container) {
+        if (!container) return;
+
+        const medias = Array.from(container.querySelectorAll('video, audio'));
+        for (const m of medias) {
+            try {
+                m.pause();
+            } catch (_) {
+            }
+            try {
+                // revoke blob
+                if (m.src && m.src.startsWith('blob:')) {
+                    try {
+                        URL.revokeObjectURL(m.src);
+                    } catch (_) {
+                    }
+                }
+                m.removeAttribute('src');
+                // calling load() ensures browser stops further activity apparently
+                try {
+                    m.load();
+                } catch (_) {
+                }
+            } catch (_) {
+            }
+        }
+
+        const iframes = Array.from(container.querySelectorAll('iframe'));
+        for (const f of iframes) {
+            try {
+                f.src = 'about:blank';
+            } catch (_) {
+            }
+        }
+
+        const imgs = Array.from(container.querySelectorAll('img'));
+        for (const img of imgs) {
+            try {
+                // revoke blob: urls if used
+                if (img.src && img.src.startsWith('blob:')) {
+                    try {
+                        URL.revokeObjectURL(img.src);
+                    } catch (_) {
+                    }
+                }
+                img.removeAttribute('src');
+            } catch (_) {
+            }
+        }
+    }
+
+    function closeModal() {
+        // stop any playing media inside modal BEFORE hiding
+        const mb = document.getElementById('modalBody');
+        stopAllMedia(mb);
+
+        document.getElementById('modalBackdrop').style.display = 'none';
+        mb.innerHTML = '';
+    }
+
+    // replace backdrop click handler to call closeModal (safe if already set)
+    document.getElementById('modalBackdrop').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeModal();
+    });
+
+
+    document.getElementById('closeModal').addEventListener('click', closeModal);
+    document.getElementById('modalBackdrop').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeModal();
+    });
+
+    const MAX_VIDEO_PREVIEW_SIZE = 15 * 1024 * 1024; // 10 MB
+
+    function mediaEmbed(host, type, hash, size, ott) {
+        const url = `https://${extractHost(host)}${ott ? "/admin" : ""}/file/${hash}/${ott ? ott : ""}`;
+        const t = (type || '').toLowerCase();
+
+        if (t.startsWith('image/')) {
+            return `<img src="${url}" alt="">`;
+        }
+        if (t.startsWith('video/')) {
+
+            return `<video src="${url}#t=5" controls preload="metadata"</video>`
+        }
+        if (t.startsWith('audio/')) {
+            return `<audio src="${url}" controls preload="metadata"></audio>`;
+        }
+        return `<div class="muted" style="padding:20px">No preview</div>`;
+    }
+
+    function ensureAuthOrRedirect(res) {
+        if (res.status === 401) {
+            window.location.href = '/user/login';
+            return false;
+        }
+        return true;
+    }
+
+    // tabs
+
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const panels = {
+        dashboard: document.getElementById('panel-dashboard'),
+        resources: document.getElementById('panel-resources'),
+        events: document.getElementById('panel-events'),
+        deliveries: document.getElementById('panel-deliveries')
+    };
+
+    function activateTab(name) {
+        tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+        document.getElementById('contentTitle').textContent = ({
+            dashboard: 'Dashboard', resources: 'Resources',
+            events: 'Events', deliveries: 'Deliveries',
+        })[name] || 'Admin';
+
+        for (const k in panels) panels[k].style.display = (k === name) ? '' : 'none';
+
+        if (name === 'resources') fetchResources();
+        if (name === 'events') fetchEvents();
+        if (name === 'deliveries') fetchDeliveries();
+    }
+
+    tabs.forEach(t => t.addEventListener('click', () => activateTab(t.dataset.tab)));
+    activateTab('dashboard');
+
+    document.getElementById('btnReload').addEventListener('click', () => {
+        const active = document.querySelector('.tab.active').dataset.tab;
+        activateTab(active);
+    });
+
+    document.getElementById('refreshAll').addEventListener('click', () => {
+        fetchOverview();
+        fetchResources();
+        fetchEvents();
+        fetchDeliveries();
+    });
+    document.getElementById('openApiDoc').addEventListener('click', () => {
+        window.open('/api', '_blank');
+    });
+
+    // dashboard summary
+
+    async function fetchOverview() {
+        try {
+            const [r1, r2, r3] = await Promise.all([
+                fetch(API.resources, {headers: {Authorization: `Bearer ${token}`}}),
+                fetch(API.events, {headers: {Authorization: `Bearer ${token}`}}),
+                fetch(API.deliveries, {headers: {Authorization: `Bearer ${token}`}})
+            ]);
+
+            if (!ensureAuthOrRedirect(r1) || !ensureAuthOrRedirect(r2) || !ensureAuthOrRedirect(r3)) return;
+
+            const [d1, d2, d3] = await Promise.all([r1.json(), r2.json(), r3.json()]);
+            document.getElementById('statResources').textContent = (d1.ok && d1.rows) ? d1.rows.length : '—';
+            document.getElementById('statEvents').textContent = (d2.ok && d2.rows) ? d2.rows.length : '—';
+            document.getElementById('statDeliveries').textContent = (d3.ok && d3.rows) ? d3.rows.length : '—';
+
+            const previewEl = document.getElementById('latestEventsPreview');
+            previewEl.innerHTML = '';
+            if (d3.ok && Array.isArray(d3.rows)) {
+                d3.rows.slice(0, 6).forEach(ev => {
+                    const d = new Date(ev.created_at || ev.received_at || Date.now()).toLocaleString();
+                    const node = el('div', {class: 'event-card'},
+                        el('div', {}, el('strong', {}, ev.origin_host || '—'), ' ', el('span', {class: 'small'}, `— ${ev.type || ''}`)),
+                        el('div', {class: 'meta'}, d),
+                        el('div', {class: 'small'}, ev.msg_hash || '')
+                    );
+                    previewEl.appendChild(node);
+                });
+            } else previewEl.textContent = 'No events available';
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    fetchOverview();
+    setTimeout(fetchOverview, 200); // warm second pass
+
+
+    async function fetchResources() {
+        const container = document.getElementById('resourcesGrid');
+        while (container.children.length > 1) container.removeChild(container.lastChild);
+        const loading = el('div', {class: 'grid-row'}, el('div', {class: 'grid-cell'}, 'loading...'));
+        container.appendChild(loading);
+
+        try {
+            const res = await fetch(API.resources, {headers: {Authorization: `Bearer ${token}`}});
+            if (!ensureAuthOrRedirect(res)) return;
+            const data = await res.json();
+            container.removeChild(loading);
+
+            if (!data.ok || !Array.isArray(data.rows)) {
+                container.appendChild(el('div', {class: 'grid-row'}, el('div', {class: 'grid-cell'}, 'Error loading')));
+                return;
+            }
+
+            data.rows.forEach(r => {
+                const row = el('div', {class: 'grid-row'});
+                let statusColor = "";
+                if (r.status === "verified") statusColor = " success";
+                if (r.status === "pending") statusColor = " warn";
+                if (r.status === "blocked") statusColor = " danger";
+                if (r.status === "unlisted") statusColor = " note";
+
+                row.appendChild(el('div', {class: 'grid-cell'}, String(r.id || '—')));
+                row.appendChild(el('div', {class: 'grid-cell'}, r.host || ''));
+                row.appendChild(el('div', {class: 'grid-cell hash', title: r.file_hash || ''}, r.file_hash || ''));
+                row.appendChild(el('div', {class: 'grid-cell'}, r.type || ''));
+                row.appendChild(el('div', {class: `grid-cell${statusColor}`}, r.status || '—'));
+                row.appendChild(el('div', {class: 'grid-cell'}, humanSize(r.size_bytes)));
+                row.appendChild(el('div', {class: 'grid-cell'}, new Date(r.created_at || 0).toLocaleString()));
+
+                row.addEventListener('click', () => openResourceModal(r));
+                container.appendChild(row);
+            });
+
+            applyGlobalFilterToTable(container, [1, 2, 3]);
+        } catch (e) {
+            container.appendChild(el('div', {class: 'grid-row'}, el('div', {class: 'grid-cell'}, 'Error: ' + String(e))));
+        }
+    }
+
+    async function openResourceModal(r) {
+        let viewUrl = `https://${extractHost(r.host)}/file/${r.file_hash}`;
+        let dlUrl = `https://${extractHost(r.host)}/file/${r.file_hash}/download`;
+
+        let ottData = null;
+        // if its not verified we need to create a short-lived
+        if (r.status === "pending") {
+            // generate ott so we can fucking see as admin
+            const ottRes = await fetch(`/admin/file/ott/create/`, {
+                method: 'POST',
+                headers: {'content-type': 'application/json', Authorization: `Bearer ${token}`},
+            });
+
+            // get data
+            ottData = await ottRes.json();
+            if (!ottData.ok) {
+                console.warn("Unable to get OTT for Video preview")
+            }
+            if (ottData.ok) {
+                // admin has own endpoint with ott handling
+                viewUrl = `/admin/file/${r.file_hash}/${ottData.ott}`;
+                dlUrl = `/admin/file/${r.file_hash}/${ottData.ott}`;
+            }
+        }
+
+        const body = el('div', {},
+            el('div', {class: 'pgrid section'},
+                el('div', {
+                    class: 'preview',
+                    html: await mediaEmbed(extractHost(r.host), r.type, r.file_hash, r.size_bytes, ottData?.ott)
+                }),
+                el('div', {},
+                    el('div', {class: 'small muted'}, 'Meta'),
+                    el('div', {class: 'spacer'}),
+                    el('div', {}, el('strong', {}, 'Hash: '), el('span', {}, r.file_hash || '')),
+                    el('div', {}, el('strong', {}, 'Host: '), el('span', {}, r.host || '')),
+                    el('div', {}, el('strong', {}, 'Type: '), el('span', {}, r.type || '—')),
+                    el('div', {}, el('strong', {}, 'Size: '), el('span', {}, humanSize(r.size_bytes))),
+                    el('div', {}, el('strong', {}, 'Status: '), el('span', {}, r.status || '—')),
+                    el('div', {class: 'spacer'}),
+                    el('div', {class: 'row'},
+                        el('a', {class: 'btn ghost', href: viewUrl, target: '_blank'}, 'Open'),
+                        el('a', {class: 'btn ghost', href: dlUrl}, 'Download'),
+                        el('button', {
+                            class: 'btn ghost',
+                            onclick: `navigator.clipboard.writeText(location.origin + '${viewUrl}')`
+                        }, 'Copy Link'),
+                        el('button', {
+                            class: 'btn ghost',
+                            onclick: `reSyncResource('${r.id}')`
+                        }, 'ReSync')
+                    )
+                )
+            ),
+            (() => {
+                const wrap = el('div', {class: 'section'});
+                wrap.appendChild(el('div', {class: 'small muted'}, 'Title'));
+                const input = el('input', {
+                    type: 'text',
+                    value: r.title || '',
+                    style: 'width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;margin-top:6px'
+                });
+                const row = el('div', {class: 'row', style: 'margin-top:8px'});
+                const saveBtn = el('button', {class: 'btn primary'}, 'Save Title');
+                saveBtn.addEventListener('click', async () => {
+                    try {
+                        const res = await fetch(`/admin/resources/${encodeURIComponent(r.id)}/updateTitle`, {
+                            method: 'POST',
+                            headers: {'content-type': 'application/json', Authorization: `Bearer ${token}`},
+                            body: JSON.stringify({title: input.value})
+                        });
+                        const data = await res.json();
+                        if (data.ok) {
+                            alert('Title updated');
+                            fetchResources();
+                        } else alert('Failed to update title');
+                    } catch (e) {
+                        alert('Error: ' + e);
+                    }
+                });
+                row.appendChild(saveBtn);
+                wrap.appendChild(input);
+                wrap.appendChild(row);
+                return wrap;
+            })(),
+            (() => {
+                const wrap = el('div', {class: 'section'});
+                wrap.appendChild(el('div', {class: 'small muted'}, 'Set Status'));
+                const row = el('div', {class: 'row', style: 'margin-top:6px'});
+                const mk = (label, cssClass, status) => {
+                    const b = el('button', {class: `btn ${cssClass}`}, label);
+                    b.addEventListener('click', async () => {
+                        await changeResourceStatus(r.id, status);
+                    });
+                    return b;
+                };
+                row.appendChild(mk('Verify', 'success', 'verified'));
+                row.appendChild(mk('Pending', 'warn', 'pending'));
+                row.appendChild(mk('Block', 'danger', 'blocked'));
+                row.appendChild(mk('Unlist', 'note', 'unlisted'));
+                wrap.appendChild(row);
+                return wrap;
+            })(),
+            (() => {
+                const wrap = el('div', {class: 'section'});
+                const row = el('div', {class: 'row'});
+                const delBtn = el('button', {class: 'btn danger'}, 'Delete Resource');
+                delBtn.addEventListener('click', async () => {
+                    if (!confirm(`Really delete this resource with id ${r.id}?`)) return;
+                    try {
+                        const res = await fetch(`/admin/resources/${encodeURIComponent(r.id)}/delete/${r.file_hash}`, {
+                            method: 'POST',
+                            headers: {Authorization: `Bearer ${token}`}
+                        });
+                        const data = await res.json();
+                        if (data.ok) {
+                            alert('Deleted');
+                            closeModal();
+                            fetchResources();
+                        } else alert('Failed to delete');
+                    } catch (e) {
+                        alert('Error: ' + e);
+                    }
+                });
+                row.appendChild(delBtn);
+                wrap.appendChild(row);
+                return wrap;
+            })()
+        );
+
+        showModal('Resource', `${r.host} — ${r.file_hash}`, body);
+    }
+
+    async function changeResourceStatus(id, status) {
+        try {
+            const res = await fetch(`/admin/resources/${encodeURIComponent(id)}/changeStatus/${encodeURIComponent(status)}`, {
+                method: 'POST',
+                headers: {Authorization: `Bearer ${token}`}
+            });
+            const data = await res.json();
+            if (data.ok) {
+                alert('Status updated: ' + status);
+                fetchResources();
+            } else alert('Failed to update status');
+        } catch (e) {
+            alert('Error: ' + e);
+        }
+    }
+
+    async function reSyncResource(id) {
+        try {
+            const res = await fetch(`/admin/resources/${encodeURIComponent(id)}/resync/`, {
+                method: 'POST',
+                headers: {Authorization: `Bearer ${token}`}
+            });
+            const data = await res.json();
+            if (data.ok) {
+                alert('Successfully resynced ');
+                fetchResources();
+            } else {
+                alert('Failed to resync with server.');
+                console.log(data)
+            }
+        } catch (e) {
+            alert('Error: ' + e);
+        }
+    }
+
+    async function fetchEvents() {
+        const serversContainer = document.getElementById('serversContainer');
+        const eventsList = document.getElementById('eventsList');
+        document.getElementById('eventsSubtitle').textContent = 'Loading events...';
+        serversContainer.innerHTML = '';
+        eventsList.innerHTML = '';
+
+        try {
+            const res = await fetch(API.events, {headers: {Authorization: `Bearer ${token}`}})
+            if (!ensureAuthOrRedirect(res)) return;
+            const data = await res.json();
+
+            if (!data.ok || !Array.isArray(data.rows)) {
+                serversContainer.innerHTML = '<div class="small">Error loading</div>';
+                return;
+            }
+
+            const hosts = {};
+            data.rows.forEach(ev => {
+                const h = ev.origin_host || ev.host || 'unknown';
+                (hosts[h] ||= []).push(ev);
+            });
+
+            const keys = Object.keys(hosts).sort((a, b) => hosts[b].length - hosts[a].length);
+            if (keys.length === 0) {
+                serversContainer.innerHTML = '<div class="small">No hosts</div>';
+                document.getElementById('eventsSubtitle').textContent = 'No events';
+                return;
+            }
+
+            keys.forEach((h, idx) => {
+                const badge = el('div', {}, el('span', {class: 'chip'}, String(hosts[h].length)));
+                const item = el('div', {class: 'server-item', 'data-host': h}, el('div', {}, h), badge);
+                item.addEventListener('click', () => {
+                    Array.from(document.querySelectorAll('.server-item')).forEach(x => x.classList.remove('active'));
+                    item.classList.add('active');
+                    renderEventsForHost(h, hosts[h]);
+                });
+                serversContainer.appendChild(item);
+                if (idx === 0) setTimeout(() => item.click(), 0);
+            });
+            document.getElementById('eventsSubtitle').textContent = `Hosts: ${keys.length}`;
+
+        } catch (e) {
+            serversContainer.innerHTML = '<div class="small">Error: ' + String(e) + '</div>';
+            document.getElementById('eventsSubtitle').textContent = 'Error loading';
+        }
+    }
+
+    function renderEventsForHost(host, events) {
+        const wrap = document.getElementById('eventsList');
+        wrap.innerHTML = '';
+        wrap.appendChild(el('div', {}, el('h4', {}, 'Events for: ' + host), el('div', {class: 'small'}, `Count: ${events.length}`)));
+
+        events.sort((a, b) => new Date(b.created_at || b.received_at) - new Date(a.created_at || a.received_at));
+
+        events.forEach(ev => {
+            const created = new Date(ev.created_at || ev.received_at || Date.now()).toLocaleString();
+            const card = el('div', {class: 'event-card'},
+                el('div', {}, el('strong', {}, ev.type || '—'), ' ', el('span', {class: 'meta'}, ' — ' + created)),
+                el('div', {}, el('span', {class: 'small'}, 'msg_hash: '), el('code', {}, ev.msg_hash || '')),
+                el('div', {}, el('span', {class: 'small'}, 'status: '), el('strong', {}, ev.status || '—'),
+                    '  ', el('span', {class: 'small'}, 'forward: ' + (ev.forward ? '1' : '0'))),
+                el('div', {style: 'margin-top:8px;display:flex;gap:8px;align-items:center'},
+                    el('button', {class: 'btn'}, 'Details'),
+                    el('button', {class: 'btn danger'}, 'Delete')
+                )
+            );
+            const [btnDetails, btnDelete] = card.querySelectorAll('button');
+            btnDetails.addEventListener('click', () => {
+                const body = el('div', {},
+                    el('div', {class: 'small muted'}, 'Origin Signature'),
+                    el('pre', {class: 'payload'}, prettyJSON(ev.origin_sig || '')),
+                    el('div', {style: 'height:8px'}),
+                    el('div', {class: 'small muted'}, 'Payload'),
+                    el('pre', {class: 'payload'}, prettyJSON(ev.payload || {}))
+                );
+                showModal('Event Details', `${host} — ${ev.type || ''}`, body);
+            });
+            btnDelete.addEventListener('click', async () => {
+                if (!confirm('Delete event?')) return;
+                try {
+                    const res = await fetch('/admin/events/' + encodeURIComponent(ev.id), {
+                        method: 'DELETE',
+                        headers: {Authorization: `Bearer ${token}`}
+                    });
+                    const data = await res.json();
+                    if (data.ok) card.remove(); else alert('Failed to delete');
+                } catch (e) {
+                    alert('Error: ' + e);
+                }
+            });
+
+            wrap.appendChild(card);
+        });
+    }
+
+    document.getElementById('refreshEvents').addEventListener('click', fetchEvents);
+
+    // deliveries
+
+    async function fetchDeliveries() {
+        const container = document.getElementById('deliveriesGrid');
+        while (container.children.length > 1) container.removeChild(container.lastChild);
+        const loading = el('div', {class: 'grid-row'}, el('div', {class: 'grid-cell'}, 'loading...'));
+        container.appendChild(loading);
+
+        try {
+            const res = await fetch(API.deliveries, {headers: {Authorization: `Bearer ${token}`}})
+            if (!ensureAuthOrRedirect(res)) return;
+            const data = await res.json();
+            container.removeChild(loading);
+
+            if (!data.ok || !Array.isArray(data.rows)) {
+                container.appendChild(el('div', {class: 'grid-row'}, el('div', {class: 'grid-cell'}, 'Error loading')));
+                return;
+            }
+
+            data.rows.forEach(r => {
+                const row = el('div', {class: 'grid-row'});
+                row.appendChild(el('div', {class: 'grid-cell'}, String(r.id || '—')));
+                row.appendChild(el('div', {class: 'grid-cell'}, String(r.event_id || '—')));
+                row.appendChild(el('div', {class: 'grid-cell'}, r.target_host || ''));
+                row.appendChild(el('div', {class: 'grid-cell'}, new Date(r.delivered_at || 0).toLocaleString()));
+                const actions = el('div', {class: 'grid-cell actions'});
+                const btnView = el('button', {class: 'btn'}, 'View');
+                btnView.addEventListener('click', () =>
+                    showModal('Delivery', r.target_host, el('pre', {class: 'payload'}, prettyJSON(r)))
+                );
+                actions.appendChild(btnView);
+                row.appendChild(actions);
+                container.appendChild(row);
+            });
+
+            applyGlobalFilterToTable(container, [1, 2, 3]); // event, target, delivered at
+        } catch (e) {
+            container.appendChild(el('div', {class: 'grid-row'}, el('div', {class: 'grid-cell'}, 'Error: ' + String(e))));
+        }
+    }
+
+    // search
+
+    function applyGlobalFilterToTable(gridTableEl, searchableIdx = []) {
+        const q = (document.getElementById('globalSearch').value || '').toLowerCase().trim();
+        const rows = Array.from(gridTableEl.querySelectorAll('.grid-row'));
+        rows.forEach(row => {
+            const cells = Array.from(row.children);
+            const hay = searchableIdx.map(i => (cells[i]?.textContent || '').toLowerCase()).join(' ');
+            row.style.display = q ? (hay.includes(q) ? '' : 'none') : '';
+        });
+    }
+
+    document.getElementById('globalSearch').addEventListener('input', () => {
+        const active = document.querySelector('.tab.active').dataset.tab;
+        if (active === 'resources') applyGlobalFilterToTable(document.getElementById('resourcesGrid'), [1, 2, 3]);
+        if (active === 'storage') applyGlobalFilterToTable(document.getElementById('storageGrid'), [1, 2, 3]);
+        if (active === 'deliveries') applyGlobalFilterToTable(document.getElementById('deliveriesGrid'), [1, 2, 3]);
+    });
+
+</script>
+</body>
+</html>

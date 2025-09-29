@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width,initial-scale=1" name="viewport"/>
+    <title>SilentShare — Login</title>
+
+    <link href="/css/login.css" rel="stylesheet"/>
+</head>
+<body>
+<div class="card" style="visibility: hidden">
+
+    <div id="logo">SilentShare</div>
+
+    <h1>Login</h1>
+
+    <form autocomplete="off" id="loginForm">
+        <label for="username">Username</label>
+        <input autocapitalize="off" autocomplete="username" id="username" name="username" type="text"/>
+
+        <label for="password">Password</label>
+        <input autocomplete="current-password" id="password" name="password" type="password"/>
+
+        <div class="row">
+            <button id="btnLogin" type="submit">Login</button>
+            <button id="btnBack" type="button" onclick="window.location.href = '/'">Back</button>
+        </div>
+    </form>
+
+    <div id="status"></div>
+</div>
+
+<script>
+    const form = document.getElementById('loginForm');
+    const usernameEl = document.getElementById('username');
+    const passEl = document.getElementById('password');
+    const status = document.getElementById('status');
+    const btnLogin = document.getElementById('btnLogin');
+
+    const isTokenFresh = t => {
+        if (!t) return false;
+        try {
+            const p = JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+            return !p.exp || (p.exp * 1000 > Date.now());
+        } catch {
+            return false;
+        }
+    };
+
+    async function isLoggedIn() {
+        const t = localStorage.getItem('token');
+        if (!isTokenFresh(t)) return false;
+        const r = await fetch("/auth/me",{
+            headers: {"Authorization": `Bearer ${t}`}
+        });
+        return r.ok;
+    }
+
+    function resetUI() {
+        status.textContent = 'Welcome to the admin dashboard!';
+        btnLogin.disabled = false;
+        document.querySelector(".card").style.visibility = 'visible';
+    }
+
+    isLoggedIn().then(result => {
+        if(result){
+            loadDashboard()
+        }
+        else{
+            resetUI();
+        }
+    })
+
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        btnLogin.disabled = true;
+        status.textContent = 'trying to login...';
+
+        const payload = {
+            username: String(usernameEl.value || '').trim(),
+            password: String(passEl.value || '')
+        };
+
+        if ((!payload.username || !payload.password)) {
+            status.textContent = 'Its just two fields... Try again!';
+            btnLogin.disabled = false;
+            return;
+        }
+
+        try {
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: {'content-type': 'application/json'},
+                body: JSON.stringify(payload),
+                credentials: 'same-origin'
+            });
+
+            const text = await res.text();
+            try {
+                const json = JSON.parse(text || '{}');
+                console.log(res);
+                console.log(text);
+                console.log(json);
+
+                if (res.ok && json && json.token) {
+                    status.textContent = 'login successfull!';
+                    try {
+                        localStorage.setItem('token', json.token);
+                        localStorage.setItem('userId', json.user.id);
+                        loadDashboard();
+
+                    } catch (_) {}
+                }else if (!res.ok) {
+                    if (res?.statusText) {
+                        status.textContent = res.statusText;
+                    } else {
+                        status.textContent = 'Login failed :o';
+                    }
+                }
+            } catch (error) {
+                console.log(error)
+            }
+        } catch (err) {
+            console.log(err)
+            status.textContent = 'Network error';
+        } finally {
+            btnLogin.disabled = false;
+        }
+    });
+
+
+    async function loadDashboard(){
+        // protected fetch workaround
+        try {
+            document.body.insertAdjacentHTML('beforeend', `<link href="/css/dashboard.css" rel="stylesheet"/>`)
+            const dashRes = await fetch('/dashboard', {
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+            });
+
+            if (dashRes.ok) {
+                const html = await dashRes.text();
+                document.open();
+                document.write(html);
+                document.close();
+                return; // fertig
+            } else {
+                console.warn('fetch dashboard failed', dashRes.status);
+                //window.location.href = '/user/login';
+                return;
+            }
+        } catch (fetchErr) {
+            console.error('fetch dashboard error', fetchErr);
+            return;
+        }
+    }
+</script>
+</body>
+</html>

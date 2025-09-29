@@ -1,0 +1,222 @@
+:root {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    line-height: 1.4;
+    color: #111;
+}
+
+body {
+    background: #fafafa;
+    margin: 0;
+}
+
+.card {
+    border: 1px solid #e6e6e6;
+    border-radius: 10px;
+    padding: 18px;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.btn {
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #f7f7f8;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    color: #111;
+    transition: background 0.15s;
+}
+
+.btn:hover {
+    background: #f0f0f1;
+}
+
+.btn:disabled, .btn.disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+input[type=text], input[type=password], input[type=file] {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+
+body {
+    background: #fafafa;
+    margin: 0;
+}
+
+.wrap {
+    width: 90vw;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 30px 0;
+    display: grid;
+    grid-template-columns:220px 1fr;
+    grid-template-areas:
+              "header header"
+              "sidebar main";
+    gap: 20px;
+}
+
+.header {
+    grid-area: header;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#logo {
+    font-weight: 800;
+    font-size: 26px;
+    margin-left: 30px;
+    font-style: italic;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 8px 14px;
+    border: 1px solid #ccc;
+    background: #f7f7f8;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    color: #111;
+}
+
+.sidebar {
+    grid-area: sidebar;
+    background: #fff;
+    border: 1px solid #e6e6e6;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .05);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: fit-content;
+}
+
+.sidebar h2 {
+    margin: 0 0 12px;
+    font-size: 16px;
+}
+
+.filter {
+    width: 100%;
+    text-align: left;
+}
+
+.card {
+    grid-area: main;
+    background: #fff;
+    border: 1px solid #e6e6e6;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .05);
+    padding: 16px;
+}
+
+.search {
+    margin-bottom: 14px;
+}
+
+.search input {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+}
+
+.item {
+    border: 1px solid #eee;
+    border-radius: 10px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.thumb {
+    display: block;
+    background: #fafafa;
+    aspect-ratio: 16/10;
+    overflow: hidden;
+}
+
+.thumb img, .thumb video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.thumb audio {
+    width: 100%;
+}
+
+.meta {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #444;
+    flex: 1;
+}
+
+.meta .hash {
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    font-style: italic;
+    color: #666;
+    word-break: break-all;
+    margin-bottom: 20px;
+}
+
+.row {
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.row a, .row button {
+    flex: 1;
+    text-align: center;
+}
+
+.muted {
+    color: #777;
+}
+
+.more {
+    display: flex;
+    justify-content: center;
+    margin: 16px 0 6px;
+}
+
+.hostStatus{
+    position: absolute;
+    display: inline-block;
+    font-style: italic;
+    bottom: 0;
+}

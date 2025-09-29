@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Network Simulation</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        #mynetwork {
+            width: 100%;
+            height: 80vh;
+            border: 1px solid lightgray;
+        }
+
+        #controls {
+            margin: 10px;
+        }
+
+        #popup {
+            display: none;
+            position: fixed;
+            top: 20%;
+            left: 20%;
+            width: 60%;
+            background: #fff;
+            border: 1px solid #333;
+            padding: 15px;
+            z-index: 1000;
+        }
+
+        #popup table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #popup th, #popup td {
+            border: 1px solid #ccc;
+            padding: 4px;
+        }
+
+        #overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 900;
+        }
+    </style>
+</head>
+<body>
+<div id="controls">
+    <button onclick="resetCounters()">Reset Counter</button>
+    <button onclick="addServer()">Server hinzufügen</button>
+    <button onclick="saveToLocalStorage()">Save</button>
+    <button onclick="restoreFromLocalStorage()">Restore</button>
+
+
+    <select id="broadcastOrigin"></select>
+    <button onclick="simulateBroadcast()">Broadcast simulieren</button>
+    <label><input checked id="parallelSpread" type="checkbox"> Parallel Spread</label>
+</div>
+<div id="mynetwork"></div>
+
+<div id="overlay" onclick="closePopup()"></div>
+<div id="popup">
+    <h3 id="popup-title"></h3>
+    <h4>Ressourcen</h4>
+    <table id="res-table">
+        <thead>
+        <tr>
+            <th>Titel</th>
+            <th>Aktion</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <button onclick="addResourceRow()">+ Ressource</button>
+    <h4>Bekannte Server</h4>
+    <table id="neigh-table">
+        <thead>
+        <tr>
+            <th>Host</th>
+            <th>Aktion</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <button onclick="addNeighborRow()">+ Server</button>
+    <br><br>
+    <button onclick="savePopup()">Speichern</button>
+    <button onclick="closePopup()">Schließen</button>
+</div>
+
+<script>
+    const simulated = true;
+
+    let servers = [];
+    let resources = [];
+    const nodes = new vis.DataSet();
+    const edges = new vis.DataSet();
+    const container = document.getElementById("mynetwork");
+    const network = new vis.Network(container, {nodes, edges}, {physics: true});
+
+    let currentServer = null;
+    let clusterColors = {};
+    let colorIndex = 0;
+
+    const colorPalette = ["#8dd3c7", "#ffffb3", "#bebada", "#fb8072", "#80b1d3", "#fdb462", "#b3de69", "#fccde5", "#d9d9d9", "#bc80bd"];
+
+    function nextColor() {
+        return colorPalette[colorIndex++ % colorPalette.length];
+    }
+
+    function resetCounters() {
+        servers.forEach(s => {
+            s.broadcastCount = 0;
+            nodes.update({id: s.id, label: s.host + " (0)"});
+        });
+    }
+
+
+    function addServer(hostname) {
+        const id = servers.length + 1;
+        const server = {
+            id,
+            host: hostname || "server" + id,
+            neighbors: [],
+            cluster: id,
+            broadcastCount: 0   // neuer Counter
+        };
+        servers.push(server);
+        clusterColors[server.cluster] = nextColor();
+        nodes.add({id: server.id, label: server.host + " (0)", color: clusterColors[server.cluster]});
+        updateBroadcastSelect();
+    }
+
+    function restoreFromLocalStorage() {
+        const raw = localStorage.getItem("networkSim");
+        if (!raw) {
+            alert("Keine gespeicherten Daten gefunden.");
+            return;
+        }
+
+        const data = JSON.parse(raw);
+
+        // alles leeren
+        servers = [];
+        resources = [];
+        nodes.clear();
+        edges.clear();
+
+        clusterColors = {};
+        colorIndex = 0;
+
+        // Server neu anlegen
+        data.servers.forEach(s => {
+            const server = {
+                ...s,
+                broadcastCount: 0 // Counter immer resetten beim Restore
+            };
+            servers.push(server);
+
+            // Clusterfarbe merken
+            clusterColors[server.cluster] = clusterColors[server.cluster] || nextColor();
+
+            // Node hinzufügen
+            nodes.add({id: server.id, label: server.host + " (0)", color: clusterColors[server.cluster]});
+        });
+
+        // Ressourcen übernehmen
+        resources = data.resources || [];
+
+        // Kanten aufbauen
+        servers.forEach(s => {
+            s.neighbors.forEach(host => {
+                const target = servers.find(t => t.host === host);
+                if (target && !edges.get({filter: e => e.from === s.id && e.to === target.id}).length) {
+                    edges.add({from: s.id, to: target.id, arrows: ""});
+                }
+            });
+        });
+
+        updateBroadcastSelect();
+    }
+
+
+    function saveToLocalStorage() {
+        const data = {
+            servers,
+            resources
+        };
+        localStorage.setItem("networkSim", JSON.stringify(data));
+        alert("Gespeichert!");
+    }
+
+
+    function updateBroadcastSelect() {
+        const sel = document.getElementById("broadcastOrigin");
+        sel.innerHTML = "";
+        servers.forEach(s => {
+            const opt = document.createElement("option");
+            opt.value = s.id;
+            opt.text = s.host;
+            sel.appendChild(opt);
+        });
+    }
+
+    network.on("click", params => {
+        if (params.nodes.length) {
+            const id = params.nodes[0];
+            currentServer = servers.find(s => s.id === id);
+            if (currentServer) openPopup(currentServer);
+        }
+    });
+
+    function openPopup(server) {
+        document.getElementById("popup-title").innerText = server.host;
+        const resTable = document.querySelector("#res-table tbody");
+        resTable.innerHTML = "";
+        resources.filter(r => r.host === server.host).forEach(r => {
+            const row = resTable.insertRow();
+            row.innerHTML = `<td contenteditable="true">${r.title}</td>
+                     <td><button onclick="this.parentNode.parentNode.remove()">X</button></td>`;
+        });
+
+        const neighTable = document.querySelector("#neigh-table tbody");
+        neighTable.innerHTML = "";
+        server.neighbors.forEach(n => {
+            const row = neighTable.insertRow();
+            row.appendChild(makeNeighborCell(n));
+            const tdAction = document.createElement("td");
+            const btn = document.createElement("button");
+            btn.textContent = "X";
+            btn.onclick = () => row.remove();
+            tdAction.appendChild(btn);
+            row.appendChild(tdAction);
+        });
+
+        document.getElementById("overlay").style.display = "block";
+        document.getElementById("popup").style.display = "block";
+    }
+
+    function makeNeighborCell(selectedHost) {
+        const td = document.createElement("td");
+        const select = document.createElement("select");
+        servers.forEach(s => {
+            if (s.host !== currentServer.host) {
+                const opt = document.createElement("option");
+                opt.value = s.host;
+                opt.text = s.host;
+                if (s.host === selectedHost) {
+                    opt.selected = true;
+                }
+                select.appendChild(opt);
+            }
+        });
+        td.appendChild(select);
+        return td;
+    }
+
+    function closePopup() {
+        document.getElementById("popup").style.display = "none";
+        document.getElementById("overlay").style.display = "none";
+    }
+
+    function addResourceRow() {
+        document.querySelector("#res-table tbody").insertRow().innerHTML =
+            `<td contenteditable="true">Neue Ressource</td>
+       <td><button onclick="this.parentNode.parentNode.remove()">X</button></td>`;
+    }
+
+    function addNeighborRow() {
+        const row = document.querySelector("#neigh-table tbody").insertRow();
+        row.appendChild(makeNeighborCell(null));
+        row.innerHTML += `<td><button onclick="this.parentNode.parentNode.remove()">X</button></td>`;
+    }
+
+    function savePopup() {
+        edges.get().forEach(e => {
+            if (e.from === currentServer.id) {
+                edges.remove(e.id);
+            }
+        });
+
+        const neighRows = document.querySelectorAll("#neigh-table tbody tr");
+        currentServer.neighbors = [];
+        neighRows.forEach(r => {
+            const host = r.cells[0].querySelector("select").value;
+            const target = servers.find(s => s.host === host);
+            if (target) {
+                if (!currentServer.neighbors.includes(target.host)) {
+                    currentServer.neighbors.push(target.host);
+                }
+                if (!edges.get({filter: e => e.from === currentServer.id && e.to === target.id}).length) {
+                    edges.add({from: currentServer.id, to: target.id, arrows: ""});
+                    mergeClusters(currentServer, target);
+                }
+            }
+        });
+
+        closePopup();
+    }
+
+    function mergeClusters(s1, s2) {
+        if (s1.cluster === s2.cluster) return;
+        const newCluster = Math.min(s1.cluster, s2.cluster);
+        const oldCluster = Math.max(s1.cluster, s2.cluster);
+        servers.forEach(s => {
+            if (s.cluster === oldCluster) s.cluster = newCluster;
+        });
+        clusterColors[newCluster] = clusterColors[newCluster] || clusterColors[oldCluster] || nextColor();
+        updateClusterColors();
+    }
+
+    function updateClusterColors() {
+        servers.forEach(s => {
+            nodes.update({id: s.id, color: clusterColors[s.cluster]});
+        });
+    }
+
+    function simulateBroadcast() {
+        const sel = document.getElementById("broadcastOrigin");
+        if (!sel.value) {
+            alert("Bitte einen Server auswählen!");
+            return;
+        }
+        const origin = servers.find(s => s.id == sel.value);
+        if (!origin) return;
+
+        // Reset beim neuen Broadcast
+        resetCounters();
+
+        const visited = new Set();
+        spreadBroadcast(origin, visited);
+    }
+
+
+    function spreadBroadcast(server, visited, senderId = null) {
+        // Counter immer erhöhen, auch wenn visited schon gesetzt ist
+        server.broadcastCount++;
+        nodes.update({id: server.id, label: server.host + " (" + server.broadcastCount + ")"});
+
+        // Wenn er schon besucht wurde, dann nicht nochmal weiterverteilen
+        if (visited.has(server.id)) {
+            return; // aber Counter wurde bereits erhöht
+        }
+        visited.add(server.id);
+
+        nodes.update({id: server.id, color: "red"});
+        setTimeout(() => nodes.update({id: server.id, color: clusterColors[server.cluster]}), 3000);
+
+        const parallel = document.getElementById("parallelSpread").checked;
+        let delay = 0;
+
+        server.neighbors.forEach(host => {
+            const target = servers.find(s => s.host === host);
+            if (target && target.id !== senderId) {
+                const start = () => {
+                    let e = edges.get({filter: edge => edge.from === server.id && edge.to === target.id});
+                    if (e.length) {
+                        e.forEach(edgeObj => {
+                            edges.update({
+                                id: edgeObj.id,
+                                color: {color: "red"},
+                                arrows: {to: {enabled: true, scaleFactor: 1}}
+                            });
+                        });
+                    }
+
+                    // Zähler hoch, weil der Nachbar ein Event erhalten hat
+                    target.broadcastCount++;
+                    nodes.update({id: target.id, label: target.host + " (" + target.broadcastCount + ")"});
+
+                    if (!visited.has(target.id)) {
+                        setTimeout(() => spreadBroadcast(target, visited, server.id), 500);
+                    }
+
+                    setTimeout(() => {
+                        if (e.length) {
+                            e.forEach(edgeObj => {
+                                edges.update({id: edgeObj.id, color: {color: "black"}, arrows: ""});
+                            });
+                        }
+                    }, 4000);
+                };
+
+
+                if (parallel) {
+                    // Alle gleichzeitig
+                    start();
+                } else {
+                    // Nacheinander
+                    setTimeout(start, delay);
+                    delay += 1000;
+                }
+            }
+        });
+    }
+
+    if (simulated) {
+        addServer("server1");
+        addServer("server2");
+        addServer("server3");
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width,initial-scale=1" name="viewport"/>
+    <script defer src="js/mediatags.js"></script>
+    <script defer src="js/audioplayer.js"></script>
+    <script defer src="js/helper.js"></script>
+    <script defer src="js/index.js"></script>
+
+    <link rel="stylesheet" href="css/index.css"/>
+
+    <title>{{server.name}} - Overview</title>
+
+</head>
+<body>
+<div class="wrap">
+    <div class="header">
+        <div id="logo">{{server.name}}</div>
+        <div class="actions">
+            <a class="btn" href="/user/upload">Upload</a>
+            <a class="btn" href="/user/login">Login</a>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <h2>Types</h2>
+        <button class="btn filter" data-type="all">All</button>
+        <button class="btn filter" data-type="image/">Images</button>
+        <button class="btn filter" data-type="video/">Videos</button>
+        <button class="btn filter" data-type="audio/">Audio</button>
+        <button class="btn filter" data-type="other">Other</button>
+    </div>
+
+    <div class="card">
+        <div class="search">
+            <input id="searchInput" placeholder="Search by title, hash, type..." type="text"/>
+        </div>
+        <div class="grid" id="grid"></div>
+        <div class="more">
+            <button class="btn" id="btnMore" style="display:none">Load more</button>
+        </div>
+        <div class="muted" id="empty" style="text-align:center; padding:8px 0; display:none;">Nothing here yet.</div>
+    </div>
+</div>
+</body>
+</html>

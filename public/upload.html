@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width,initial-scale=1" name="viewport"/>
+    <title>SilentShare — Upload</title>
+
+    <link href="/css/login.css" rel="stylesheet"/>
+    <style>
+        .card {
+            max-width: 500px;
+            margin: 40px auto;
+            padding: 20px;
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,.05);
+        }
+        h1 {
+            margin: 0 0 18px;
+            font-size: 22px;
+
+        }
+        label {
+            display: block;
+            margin: 12px 0 6px;
+            font-weight: 600;
+        }
+        input[type=file] {
+            display: block;
+            margin-bottom: 12px;
+        }
+        button {
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            background: #f7f7f8;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+        }
+        .row {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        progress {
+            width: 100%;
+            height: 14px;
+            margin-top: 10px;
+        }
+        .preview {
+            margin-top: 12px;
+        }
+        img.preview-img, video.preview-video {
+            max-width: 100%;
+            max-height: 40vh;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+        audio { margin-top: 6px; width: 100%; }
+        pre {
+            margin-top: 14px;
+            padding: 10px;
+            font-size: 13px;
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+
+        #msg{
+            width: calc(100% - 46px);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        #afterUploadButtons button{
+            width: 50%;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1 id="logo">SilentShare</h1>
+    <div id="msg" style="display: none;"></div>
+
+    <div id="afterUploadButtons" style="display: none; width: 100%; justify-content: center;gap: 20px;margin: 20px 0 20px 0;">
+        <button id="viewUploaded" style="background-color: rgba(19,227,0,0.55);color: rgba(6,66,1,0.55);border: 2px solid rgba(16,166,1,0.4);">View</button>
+        <button id="shareUploaded" style="background-color: rgba(255,215,0,1);color: rgb(66,55,0);border: 2px solid rgb(216,184,0);">Share</button>
+    </div>
+
+    <h1>Upload</h1>
+
+    <form id="uploadForm" enctype="multipart/form-data" autocomplete="off">
+        <label for="fileInput">Choose file</label>
+        <input id="fileInput" name="file" type="file" accept="image/*,video/*,audio/*"/>
+
+        <div class="preview" id="preview"></div>
+
+        <div class="row">
+            <button id="btnUpload" type="button">Start Upload</button>
+            <button id="btnBack" type="button" onclick="window.location.href = '/'">Back</button>
+        </div>
+
+        <progress id="progressBar" value="0" max="100" style="display:none"></progress>
+    </form>
+</div>
+
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    const btnUpload = document.getElementById('btnUpload');
+    const progressBar = document.getElementById('progressBar');
+    const viewUploaded = document.getElementById('viewUploaded');
+    const shareUploaded = document.getElementById('shareUploaded');
+    const afterUploadButtons = document.getElementById('afterUploadButtons');
+    let currentFile = null;
+
+    function showBanner(text, color){
+        let msg = document.getElementById("msg");
+        msg.innerHTML = text;
+        msg.style.backgroundColor = `hsla(from ${color} h s calc(l * 1.5) / 0.5)`;
+        msg.style.border = `3px solid hsl(from ${color} h s calc(l * 1.25) / 0.75)`;
+        msg.style.color = `hsl(from ${color} h s calc(l * 0.5))`;
+        msg.style.display = 'block';
+    }
+
+    function resetUI() {
+        currentFile = null;
+        fileInput.value = '';
+        preview.innerHTML = '';
+        progressBar.style.display = 'none';
+        progressBar.value = 0;
+        btnUpload.disabled = false;
+    }
+
+    fileInput.addEventListener('change', () => {
+        preview.innerHTML = '';
+        const f = fileInput.files && fileInput.files[0];
+        if (!f) { currentFile = null; return; }
+        currentFile = f;
+
+        const mime = f.type || '';
+        const url = URL.createObjectURL(f);
+
+        if (mime.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.className = 'preview-img';
+            img.src = url;
+            preview.appendChild(img);
+        } else if (mime.startsWith('video/')) {
+            const v = document.createElement('video');
+            v.className = 'preview-video';
+            v.controls = true;
+            v.src = url;
+            preview.appendChild(v);
+        } else if (mime.startsWith('audio/')) {
+            const a = document.createElement('audio');
+            a.controls = true;
+            a.src = url;
+            preview.appendChild(a);
+        } else {
+            preview.textContent = 'Preview not available for this file type';
+        }
+    });
+
+
+    btnUpload.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!currentFile) {
+            return;
+        }
+
+        btnUpload.disabled = true;
+        progressBar.style.display = 'block';
+
+        const form = new FormData();
+        form.append('file', currentFile);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/upload', true);
+
+        xhr.upload.onprogress = (ev) => {
+            if (ev.lengthComputable) {
+                const pct = Math.round((ev.loaded / ev.total) * 100);
+                progressBar.value = pct;
+            }
+        };
+
+        xhr.onload = () => {
+            try {
+                const json = JSON.parse(xhr.responseText || '{}');
+
+                if(json?.ok === true && json?.file_hash) {
+                    let file_hash = json.file_hash;
+                    let host = json.host;
+                    let exists = json.exists;
+
+                    let url = ``;
+
+                    showBanner(
+                        `Your file has been successfully uploaded!<br>
+                        To prevent abuse your submitted file wont be publicly listed until reviewed by an admin or by network trust scores.`
+                    , "green")
+
+                    afterUploadButtons.style.display = "flex";
+
+                    shareUploaded.onclick = () => {
+                        navigator.clipboard.writeText(file_hash);
+                    }
+
+                    console.log(json)
+
+                    viewUploaded.onclick = () => {
+                        window.open(`https://${host}/file/${file_hash}`,'_blank');
+                    }
+                }
+                else{
+                    showBanner("Upload failed! " + json?.code, "indianred")
+                }
+
+                console.log(json);
+            } catch {
+                showBanner(xhr.responseText, "indianred")
+            }
+            btnUpload.disabled = false;
+        };
+
+        xhr.onerror = () => {
+            showBanner("Upload failed! Possible network error.", "indianred")
+            btnUpload.disabled = false;
+        };
+
+        xhr.send(form);
+    });
+
+    resetUI();
+</script>
+</body>
+</html>

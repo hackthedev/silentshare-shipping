@@ -1,0 +1,8 @@
+[program:silentshare]
+directory=/home/silentshare/sv
+command=sh check.sh
+autostart=true
+autorestart=true
+stderr_logfile=/home/silentshare/sv/err.log
+stdout_logfile=/home/silentshare/sv/out.log
+stopsignal=QUIT
