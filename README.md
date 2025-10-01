@@ -24,7 +24,7 @@ SilentShare is meant to be a new decentralized file sharing software for servers
 
 - **Easy interface and experience**
 
-  - Every host serves the same webpage. Since all hosts eventually sync, it doesn’t matter which one you connect to — you can view any file from any server.
+  - Every host serves the same webpage. Since all hosts eventually sync, it doesn’t matter which one you connect to, you can view any file from any server.
 
   - This makes the network feel like a central service, while in reality it runs in the background across multiple independent hosts.
 
