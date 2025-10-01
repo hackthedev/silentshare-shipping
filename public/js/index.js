@@ -368,7 +368,11 @@ function applyFilters() {
         const matchSearch = !q || (it.title || '').toLowerCase().includes(q) || it.file_hash.includes(q) || type.includes(q);
         return matchType && matchSearch;
     });
-    for (const it of filtered) grid.appendChild(renderItem(it));
+
+
+    for (const it of filtered) {
+        grid.appendChild(renderItem(it));
+    }
     empty.style.display = filtered.length ? 'none' : 'block';
 }
 

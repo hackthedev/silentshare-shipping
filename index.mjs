@@ -23,6 +23,9 @@ import {doSyncJob} from "./modules/jobs/syncServerData.mjs";
 import Logger from "./modules/logger.mjs";
 import {registerTemplateMiddleware} from "./modules/template.mjs";
 
+import dSync from "@hackthedev/dsync";
+export let sync = new dSync("silentshare", app)
+
 export function promptTerminal(question) {
     const rl = readline.createInterface({
         input: process.stdin,
@@ -70,6 +73,7 @@ app.use((req, res, next) => {
 });
 
 
+// need to improve after testing to load both routes and syncs
 async function loadRouteFiles(dir = path.join(__dirname, "routes")) {
     async function walk(current) {
         const entries = await fs.promises.readdir(current, {withFileTypes: true}).catch(() => []);
@@ -107,7 +111,43 @@ async function loadRouteFiles(dir = path.join(__dirname, "routes")) {
     await walk(dir);
 }
 
+async function loadSyncEvents(dir = path.join(__dirname, "modules\\syncs")) {
+    async function walk(current) {
+        const entries = await fs.promises.readdir(current, {withFileTypes: true}).catch(() => []);
+        for (const ent of entries) {
+            const full = path.join(current, ent.name);
+            if (ent.isDirectory()) {
+                await walk(full);
+                continue;
+            }
+            if (!ent.isFile()) continue;
+            if (!(/\.(js|mjs)$/i).test(ent.name)) continue;
+            if (ent.name.includes("template")) continue;
+
+            try {
+                const mod = await import(pathToFileURL(full).toString());
+                if (typeof mod.default === "function") {
+                    mod.default(sync, {
+                        dbQuery,
+                        pool,
+                        isAuth,
+                        isAdmin,
+                        signToken,
+                        sanitizeForJson,
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to load syncs:", full, err);
+            }
+        }
+    }
+
+    await walk(dir);
+}
+
+
 await loadRouteFiles();
+await loadSyncEvents();
 
 app.use((req, res) => {
     res.status(404).json({ok: false, error: "Not Found"});
@@ -116,10 +156,6 @@ app.use((req, res) => {
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
-
-
-
-
 
 process.stdin.resume();
 process.stdin.setEncoding('utf8');
@@ -133,14 +169,6 @@ process.stdin.on('data', function (text) {
     handleTerminalCommands(command, args);
 });
 
-
-
-doSyncJob(2 * 60_000, true)
-
-
-
-
-
-
+doSyncJob(config.sync.interval.minutes * 60_000, true)
 
 

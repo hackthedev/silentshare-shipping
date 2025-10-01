@@ -50,8 +50,14 @@ export function checkObjectKeys(obj, path, defaultValue) {
 }
 
 export function checkConfigAdditions(config){
+    checkObjectKeys(config, "info.adsense.snippet", "");
+
     checkObjectKeys(config, "info.server.name", "SilentShare");
 
+    checkObjectKeys(config, "sync.files.enabled", true);
+    checkObjectKeys(config, "sync.files.max_size_mb", 200);
+    checkObjectKeys(config, "sync.files.networkCoveragePercent", 30);
+    checkObjectKeys(config, "sync.files.pingLimitMs", 1000);
 
     checkObjectKeys(config, "sync.interval.minutes", 10);
 

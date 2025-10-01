@@ -1,10 +1,13 @@
 import {dbQuery, getFirstRow} from "../sql.mjs";
 import {extractHost} from "../helpers.mjs";
 import {getConfig, initConfig} from "../config-handler.mjs";
-import {verifyJson} from "../sign-helper.mjs";
 import {discoverHost} from "../sync-helpers.mjs";
 import {addResource} from "../../routes/upload.mjs";
 import Logger from "../logger.mjs";
+
+
+import { dSyncSign } from "@hackthedev/dsync-sign";
+const signer = new dSyncSign();
 
 initConfig();
 let config = getConfig();
@@ -40,7 +43,7 @@ export async function syncSingleResource(id){
 
     if(hostResources?.ok === true){
         // lets verify the data and origin
-        let isValid = await verifyJson(hostResources, storedServerData?.public_key);
+        let isValid = await signer.verifyJson(hostResources, storedServerData?.public_key);
 
         // data legit comes from host
         if(isValid === true){
@@ -92,7 +95,7 @@ export async function syncResources(targetHost, index) {
         hostToSync = await dbQuery(`
             SELECT * FROM servers 
             WHERE last_sync IS NULL 
-            OR last_sync < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL ? minute) ORDER BY last_sync LIMIT 1`, [config.sync.interval])
+            OR last_sync < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL ? minute) ORDER BY last_sync LIMIT 1`, [config.sync.interval.minutes])
     }
     else{
         hostToSync = await dbQuery(`
@@ -106,6 +109,8 @@ export async function syncResources(targetHost, index) {
     let host = targetHost ? targetHost : extractHost(hostServerData?.host);
     if (!host) return; // host is unkown
 
+    if(host === config.host) return;
+
     let hostResources = await (await fetch(`https://${host}/resources/${config.host}/${index ? index : ""}`)).json();
     if (hostResources?.ok === true) {
 
@@ -114,7 +119,7 @@ export async function syncResources(targetHost, index) {
             let resources = hostResources?.items;
             let hostSig = hostResources?.sig;
             let hostPublicKey = hostServerData.public_key;
-            let isValid = await verifyJson(hostResources, hostPublicKey);
+            let isValid = await signer.verifyJson(hostResources, hostPublicKey);
 
             // the list is verified and legit
             // it doesnt mean that it doesnt contain bad shit
@@ -140,6 +145,8 @@ export async function syncResources(targetHost, index) {
                         type: resource.type,
                         title: resource.title,
                     });
+
+                    // check if we should copy the file itself
                 }
 
                 await dbQuery(`UPDATE servers SET last_sync = CURRENT_TIMESTAMP WHERE host = ?`, [extractHost(host)]);

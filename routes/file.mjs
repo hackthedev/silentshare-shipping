@@ -14,9 +14,10 @@ import {requireAdmin, requireAuth} from "../modules/route-helpers.mjs";
 import {rateLimit} from "../modules/ratelimit.mjs";
 import {enableCors} from "../modules/cors-helper.mjs";
 import {extractHost} from "../modules/helpers.mjs";
-import {signJson, verifyJson} from "../modules/sign-helper.mjs";
-import {getPublicKey} from "../modules/crypt.mjs";
 import {discoverHost} from "../modules/sync-helpers.mjs";
+
+import { dSyncSign } from "@hackthedev/dsync-sign";
+const signer = new dSyncSign();
 
 initConfig();
 const config = getConfig();
@@ -56,7 +57,7 @@ export default function registerRoute(app, deps) {
         let resourceList = await listResources(index, 100);
 
         let payload = {ok: true, items: resourceList.items, more_data: resourceList.more_data, index: resourceList.index};
-        await signJson(payload)
+        await signer.signJson(payload)
 
         // the server seems to be real so lets show our resources
         res.status(200).json(payload);
@@ -137,7 +138,7 @@ export default function registerRoute(app, deps) {
                 if (isHost) {
                     if (json) {
                         let payload = {ok: true, ...hostsCollection}
-                        await signJson(payload);
+                        await signer.signJson(payload);
                         return res.status(200).json(payload);
                     }
 

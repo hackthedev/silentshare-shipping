@@ -11,6 +11,7 @@ import {requireAdmin} from "../modules/route-helpers.mjs";
 import {dbQuery} from "../modules/sql.mjs";
 
 import {extractHost} from "../modules/helpers.mjs";
+import {checkFileReplication, downloadFile} from "../modules/file-replication.mjs";
 
 initConfig();
 let config = getConfig();
@@ -48,6 +49,11 @@ export async function addResource(resource, update = false) {
             `;
 
     await dbQuery(insertResourceSql, [resource.host, resource.file_hash, resource.hash_ref, resource.size_bytes, resource.type, resource.title]);
+
+    let repCheck = await checkFileReplication(resource.file_hash);
+    if(repCheck.shouldReplicate === true){
+        downloadFile(resource.host, resource.file_hash, config.upload.storage_dir);
+    }
 }
 
 

@@ -26,6 +26,7 @@ export function registerTemplateMiddleware(app, __dirname, fs, path) {
             ["meta.page.title", () => getMetaTitle()],
             ["meta.page.description", () => getMetaDescription()],
             ["server.name", () => config.info.server.name || "SilentShare"],
+            ["adsense.snippet", () => config.info.adsense.snippet || ""],
         ];
 
         return template.replace(/{{\s*([^{}\s]+)\s*}}/g, (match, key) => {
