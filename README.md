@@ -2,15 +2,31 @@
 
 ![Version](https://img.shields.io/static/v1?label=State&message=Early%20Access&color=orange) [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/M4M719FPNG)
 
-SilentShare is meant to be a new decentralized file sharing software for servers and users. Similar to [Nostr](https://en.wikipedia.org/wiki/Nostr), SilentShare uses a similar way of communication, like events in JSON format and private/public key signing and verification. Tho its similar it comes with a few additions, like:
+SilentShare is meant to be a new decentralized file sharing software for servers and users. Similar to [Nostr](https://en.wikipedia.org/wiki/Nostr), SilentShare uses a similar way of communication, like events in JSON format and private/public key signing and verification. Tho its similar it comes with a few additions:
 
-- **Fully** tamper proof events
+- **Fully tamper-proof events**
+
 - Automatic **penalties**
+
   - Spam penalties
   - Incorrect event data
   - Manually voted penalties
-- Rate Limits
-  - When a server rate limits a request it will automatically go to the next available server, acting like a load balancer!
+
+- **Automatic load balancing**
+
+  - If a server goes down or blocks a request due to rate limits, the next available host is chosen automatically. This repeats until a working host is found or none remain.
+
+- **Self-healing CDN**
+
+  - Thanks to dynamic file replication, if a host goes down, files are automatically replicated by other hosts.
+
+  - If ping latency to a host is too high, it is treated as offline during replication checks, ensuring fast response times for users.
+
+- **Easy interface and experience**
+
+  - Every host serves the same webpage. Since all hosts eventually sync, it doesn’t matter which one you connect to — you can view any file from any server.
+
+  - This makes the network feel like a central service, while in reality it runs in the background across multiple independent hosts.
 
 These penalties are for the many different servers that relay requests or serve files through the network as there is no real client to client communication. Every Server Node has a trust score of a server. With each penalty, that trust score is going down, until the server gets automatically blocked. This way bad actors are automatically being purged from the network.
 
@@ -51,15 +67,3 @@ There's also a admin interface to manage resources and in the future to manage e
 > This is where the manual penalty vote would be implemented as example so if a resource is considered illegal a vote will be cast across the network to remove the resource and block the servers hosting said file.
 
 ![image-20250929134549575](./assets/image-20250929134549575.png)
-
-<br>
-
-## Current Network State
-
-Currently file syncing isnt implemented yet as well as the automatic penalties because there are a few small things i need to figure out yet and plan so i can implement these features in the best possible way so that its not becoming painful in the future. 
-
-Currently only the syncing of resources work, which means if server 1 and 2 know each other, they can share their file informations with each other, and if a client connects to either server 1 or 2, he will still be able to view all files from both servers. So basically it works, just the actual file syncing too isnt done yet.
-
-Other than the network syncing stuff everything is working from the pov of a "single instance". Users and admins can upload files, you can set upload limits, you can verify, unlist, block etc file resources etc.
-
-Donations would help me a lot as it means i can spend more time on the development.
